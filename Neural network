@@ -1,0 +1,68 @@
+import torch
+from torch.autograd import Variable
+import matplotlib.pyplot as plt                                 #plot
+import torch.nn.functional as F                                 #activation functions
+
+
+
+x = torch.unsqueeze(torch.linspace(-1, 1, 100), dim=1)          #伪数据x,范围是-1到+1,均分为10000
+y = x.pow(2) + 0.2*torch.rand(x.size())                         #伪数据y,为x的平方+噪声
+
+
+x = Variable(x)                                                 #将x数据放入Variable              
+y = Variable(y)                                                 #将y数据放入Variable
+
+
+print("原始图像：")
+plt.scatter(x.data.numpy(), y.data.numpy())
+plt.show()                                                      #可视化数据
+
+
+
+class Net(torch.nn.Module):                                     #Net 继承于 torch.nn.Module 模块
+    
+    
+    def __init__(self, n_feature, n_hidden, n_output):          #初始化函数 
+        super(Net, self).__init__()                             #继承 __init__
+        self.hidden = torch.nn.Linear(n_feature, n_hidden)      #隐藏层线性输出
+        self.predict = torch.nn.Linear(n_hidden, n_output)      #输出层线性输出
+        
+        
+    def forward(self, x):                                       #向前传播函数
+        x = F.relu(self.hidden(x))                              #激励函数(隐藏层的线性值)
+        x = self.predict(x)                                     #输出值（预测值）
+        return x                                               #返回输出值（预测值）
+
+
+print("神经网络：")
+net=Net(1,10,1)                                                #实例化: 一个输入， 十个神经元， 一个输出   
+print(net)                                                     #将网络其打印出来
+
+
+plt.ion()                   
+plt.show()
+
+optimizer = torch.optim.SGD(net.parameters(),lr=0.3)           #optimizer(优化器):SGD（Stochastic Gradient Descent），learning rate = 0.5
+
+
+loss_function = torch.nn.MSELoss()                             #loss function:MSELoss(均方损失函数)
+
+
+print("训练过程：")
+for t in range(200):                                          #开始训练！
+    prediction = net(x)                                       #计算预测值
+    loss = loss_function(prediction, y)                       #计算误差
+    
+                                                              #优化过程
+    optimizer.zero_grad()                                     #清空上一步残余更新参数值
+    loss.backward()                                           #误差反向传播，计算参数更新值
+    optimizer.step()                                          #将参数更新值写入到net的参数中
+    
+    
+    if t%5==0:                                               #每五步打印一次图像
+        plt.cla()                                             
+        plt.scatter(x.data.numpy(),y.data.numpy())            #原始的数据图
+        plt.plot(x.data.numpy(),prediction.data.numpy(),"r-",lw=5)  #预测的数据图
+        plt.text(0.5, 0, 'Loss=%.4f' % loss.data[0], fontdict={'size': 15, 'color':  'red'}) #显示Loss的大小
+        plt.pause(0.1)                                        #每一秒暂停一次屏幕
+        plt.show()
